@@ -70,7 +70,7 @@ sema_down (struct semaphore *sema) {
 		list_sort (&sema->waiters, priority_less, NULL);
 		struct list_elem *front_elem = list_front (&sema->waiters);
 		struct thread *front_thread = list_entry (front_elem, struct thread, elem);
-		printf("(sema_down) block 들어가고 sema_waiter에 대기중일 쓰레드: %d\n", front_thread->priority);
+		// printf("(sema_down) block 들어가고 sema_waiter에 대기중일 쓰레드: %d\n", front_thread->priority);
 		thread_block ();
 	}
 	sema->value--;
@@ -118,6 +118,7 @@ sema_up (struct semaphore *sema) {
 					struct thread, elem));
 	sema->value++;
 	intr_set_level (old_level);
+	yield_by_priority();
 }
 
 static void sema_test_helper (void *sema_);

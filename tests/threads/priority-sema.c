@@ -35,7 +35,6 @@ test_priority_sema (void)
   for (i = 0; i < 10; i++) 
     {
       sema_up (&sema);
-      timer_sleep(10);
       msg ("Back in main thread."); 
       // printf("현재 semaphore value: %d\n", sema.value);
     }

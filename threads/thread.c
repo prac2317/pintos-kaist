@@ -126,20 +126,16 @@ void
 thread_start (void) {
 	/* Create the idle thread. */
 	struct semaphore idle_started;
-	// printf("문제발생1!!\n");
 	sema_init (&idle_started, 0);
-	// printf("문제발생2!!\n");
 	printf("%s\n", thread_current()->name);
-	// printf("%s\n", thread_current()->priority);
 	thread_create ("idle", PRI_MIN, idle, &idle_started);
-	// printf("문제발생3!!\n");
 
 	/* Start preemptive thread scheduling. */
 	intr_enable ();
 
 	/* Wait for the idle thread to initialize idle_thread. */
 	sema_down (&idle_started);
-	printf("sema_up 이후 누가 먼저 실행되는지: thread_start\n");
+	// printf("sema_up 이후 누가 먼저 실행되는지: thread_start\n");
 }
 
 /* Called by the timer interrupt handler at each timer tick.
@@ -256,16 +252,16 @@ thread_unblock (struct thread *t) {
 	list_sort (&ready_list, priority_less, NULL);
 	t->status = THREAD_READY;
 
-	if (!list_empty (&ready_list)) {
-		struct list_elem *front_elem = list_front (&ready_list);
-		struct thread *front_thread = list_entry (front_elem, struct thread, elem);
-		printf("(thread_unblock) 현재 cpu를 점유하는 쓰레드의 이름과 우선순위: %s, %d\n", thread_current()->name, thread_current()->priority);
-		printf("(thread_unblock) ready_list 맨앞 쓰레드의 이름과 우선순위 : %s, %d\n", front_thread->name, front_thread->priority);
-		if (front_thread->priority > thread_current()->priority) {
-			printf("(thread_unblock) 곧 thread_yield 시작합니다!\n");
-			thread_yield();
-		}
-	}
+	// if (!list_empty (&ready_list)) {
+	// 	struct list_elem *front_elem = list_front (&ready_list);
+	// 	struct thread *front_thread = list_entry (front_elem, struct thread, elem);
+	// 	printf("(thread_unblock) 현재 cpu를 점유하는 쓰레드의 이름과 우선순위: %s, %d\n", thread_current()->name, thread_current()->priority);
+	// 	printf("(thread_unblock) ready_list 맨앞 쓰레드의 이름과 우선순위 : %s, %d\n", front_thread->name, front_thread->priority);
+	// 	if (front_thread->priority > thread_current()->priority) {
+	// 		printf("(thread_unblock) 곧 thread_yield 시작합니다!\n");
+	// 		thread_yield();
+	// 	}
+	// }
 
 	intr_set_level (old_level);
 }
@@ -463,7 +459,7 @@ thread_get_recent_cpu (void) {
    special case when the ready list is empty. */
 static void
 idle (void *idle_started_ UNUSED) {
-	printf("(idle) idle 실행 여부 확인\n");
+	// printf("(idle) idle 실행 여부 확인\n");
 	struct semaphore *idle_started = idle_started_;
 
 	idle_thread = thread_current ();
@@ -472,25 +468,18 @@ idle (void *idle_started_ UNUSED) {
 	struct list_elem *front_elem = list_begin(sema_waiters);
 	struct thread *front_thread = list_entry (front_elem, struct thread, elem);
 
-	printf("(idle)(sema_up 전) sema_waiter에서 대기중인 쓰레드 우선순위: %d\n", front_thread->priority);
-	printf("(idle)(sema_up 전) sema_waiter에서 대기중인 쓰레드 이름: %s\n", front_thread->name);
+	// printf("(idle)(sema_up 전) sema_waiter에서 대기중인 쓰레드 우선순위: %d\n", front_thread->priority);
+	// printf("(idle)(sema_up 전) sema_waiter에서 대기중인 쓰레드 이름: %s\n", front_thread->name);
 
 	sema_up (idle_started);
 
-	printf("(idle) semaphore의 value: %d\n", idle_started->value);
-	printf("(idle) sema_up 이후 누가 실행되는지: idle\n");
-
-	front_elem = list_front (sema_waiters);
-	front_thread = list_entry (front_elem, struct thread, elem);
-	printf("(idle) (sema_up 후) sema_waiter에서 대기중인 쓰레드: %d\n", front_thread->priority);
-	printf("(idle) (sema_up 후) sema_waiter에서 대기중인 쓰레드: %s\n", front_thread->name);
+	// printf("(idle) semaphore의 value: %d\n", idle_started->value);
+	// printf("(idle) sema_up 이후 누가 실행되는지: idle\n");
 
 	for (;;) {
 		/* Let someone else run. */
-		printf("idle 계속 실행되는가? --- 1, ticks = %d\n", timer_ticks());
 		intr_disable ();
 		thread_block ();
-		printf("idle 계속 실행되는가? --- 2, ticks = %d\n", timer_ticks());
 		/* Re-enable interrupts and wait for the next one.
 
 		   The `sti' instruction disables interrupts until the
