@@ -18,3 +18,7 @@ build/%: $(DIRS) build/Makefile
 
 clean:
 	rm -rf build
+
+test: $(DIRS) build/Makefile
+	echo "hello.";
+	cd build && $(MAKE) $@

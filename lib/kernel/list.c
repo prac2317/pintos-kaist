@@ -1,5 +1,6 @@
 #include "list.h"
 #include "../debug.h"
+#include "../../include/threads/thread.h"
 
 /* Our doubly linked lists have two header elements: the "head"
    just before the first element and the "tail" just after the
@@ -410,6 +411,16 @@ list_sort (struct list *list, list_less_func *less, void *aux) {
 	while (output_run_cnt > 1);
 
 	ASSERT (is_sorted (list_begin (list), list_end (list), less, aux));
+}
+
+bool
+priority_less (struct list_elem *a_, struct list_elem *b_,
+            void *aux) 
+{
+  struct thread *a = list_entry (a_, struct thread, elem);
+  struct thread *b = list_entry (b_, struct thread, elem);
+  
+  return a->priority > b->priority;
 }
 
 /* Inserts ELEM in the proper position in LIST, which must be

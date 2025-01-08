@@ -67,6 +67,10 @@ sema_down (struct semaphore *sema) {
 	old_level = intr_disable ();
 	while (sema->value == 0) {
 		list_push_back (&sema->waiters, &thread_current ()->elem);
+		list_sort (&sema->waiters, priority_less, NULL);
+		struct list_elem *front_elem = list_front (&sema->waiters);
+		struct thread *front_thread = list_entry (front_elem, struct thread, elem);
+		printf("(sema_down) block 들어가고 sema_waiter에 대기중일 쓰레드: %d\n", front_thread->priority);
 		thread_block ();
 	}
 	sema->value--;
@@ -224,6 +228,7 @@ lock_release (struct lock *lock) {
 
 	lock->holder = NULL;
 	sema_up (&lock->semaphore);
+	// printf("(----------lock_release----------)\n");
 }
 
 /* Returns true if the current thread holds LOCK, false
