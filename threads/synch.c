@@ -68,8 +68,8 @@ sema_down (struct semaphore *sema) {
 	while (sema->value == 0) {
 		list_push_back (&sema->waiters, &thread_current ()->elem);
 		list_sort (&sema->waiters, priority_less, NULL);
-		struct list_elem *front_elem = list_front (&sema->waiters);
-		struct thread *front_thread = list_entry (front_elem, struct thread, elem);
+		// struct list_elem *front_elem = list_front (&sema->waiters);
+		// struct thread *front_thread = list_entry (front_elem, struct thread, elem);
 		// printf("(sema_down) block 들어가고 sema_waiter에 대기중일 쓰레드: %d\n", front_thread->priority);
 		thread_block ();
 	}
@@ -118,6 +118,8 @@ sema_up (struct semaphore *sema) {
 					struct thread, elem));
 	sema->value++;
 	intr_set_level (old_level);
+
+	//todo: 이게 아닐거같다!!
 	yield_by_priority();
 }
 
@@ -193,8 +195,18 @@ lock_acquire (struct lock *lock) {
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
 
+	// lock의 value가 0일 경우, 우선순위 교체
+	if(lock->semaphore.value == 0) {
+		int guest_priority = thread_current()->priority;
+		int holder_priority = lock->priority;
+		if (guest_priority > holder_priority) {
+			lock->holder->priority = guest_priority;
+		}
+	} 
+
 	sema_down (&lock->semaphore);
 	lock->holder = thread_current ();
+	lock->priority = thread_current ()->priority;
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -227,9 +239,24 @@ lock_release (struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (lock_held_by_current_thread (lock));
 
+
+	// if(lock->semaphore.value == 0) {
+	// 	struct list *sema_waiters = &lock->semaphore.waiters;
+	// 	struct list_elem *front_elem = list_begin(sema_waiters);
+	// 	struct thread *front_thread = list_entry (front_elem, struct thread, elem);
+	// 	int guest_priority = front_thread->priority;
+	// 	int holder_priority = lock->holder->priority;
+
+	// 	if (lock->donator && lock->holder->priority != lock->donator->priority) {
+	// 		thread_current()->priority = holder_priority;
+	// 		lock->holder->priority = guest_priority;
+	// 	}
+	// }
+	if (lock->priority != lock->holder->priority) {
+		lock->holder->priority = lock->priority;
+	}
 	lock->holder = NULL;
 	sema_up (&lock->semaphore);
-	// printf("(----------lock_release----------)\n");
 }
 
 /* Returns true if the current thread holds LOCK, false
