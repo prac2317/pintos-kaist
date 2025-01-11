@@ -28,7 +28,6 @@ test_priority_sema (void)
       char name[16];
       snprintf (name, sizeof name, "priority %d", priority);
       thread_create (name, priority, priority_sema_thread, NULL);
-      // printf("생성된 쓰레드: %s, 우선순위: %d\n", name, priority);
     }
 
 
@@ -36,14 +35,12 @@ test_priority_sema (void)
     {
       sema_up (&sema);
       msg ("Back in main thread."); 
-      // printf("현재 semaphore value: %d\n", sema.value);
     }
 }
 
 static void
 priority_sema_thread (void *aux UNUSED) 
 {
-  // printf("현재 작동하는 쓰레드: %s\n", thread_name());
   sema_down (&sema);
   msg ("Thread %s woke up.", thread_name ());
 }

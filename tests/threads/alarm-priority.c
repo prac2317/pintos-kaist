@@ -13,6 +13,16 @@ static thread_func alarm_priority_thread;
 static int64_t wake_time;
 static struct semaphore wait_sema;
 
+// static void
+// test () {
+//   int count;
+//   struct thread *curr = thread_current();
+//   printf("현재 실행 중인 쓰레드: %s, 우선순위: %d\n", curr->name, curr->priority);
+//   while(1) {
+//     count++;
+//   }
+// }
+
 void
 test_alarm_priority (void) 
 {
@@ -20,6 +30,13 @@ test_alarm_priority (void)
   
   /* This test does not work with the MLFQS. */
   ASSERT (!thread_mlfqs);
+
+  // thread_create ("test", 60, test, NULL);
+  
+  // printf("다시 넘어왔다\n");
+  // struct thread *c = thread_current();
+  // printf("넘어왔을 때, 현재 실행 중인 쓰레드: %s, 우선순위: %d\n", c->name, c->priority);
+
 
   wake_time = timer_ticks () + 5 * TIMER_FREQ;
   sema_init (&wait_sema, 0);

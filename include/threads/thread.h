@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "threads/synch.h"
 #include "threads/interrupt.h"
 #ifdef VM
 #include "vm/vm.h"
@@ -105,6 +106,7 @@ struct thread {
 #endif
 	
 	int64_t time;
+	struct lock *lock;
 
 	/* Owned by thread.c. */
 	struct intr_frame tf;               /* Information for switching */

@@ -42,7 +42,9 @@ test_priority_donate_sema (void)
   thread_create ("low", PRI_DEFAULT + 1, l_thread_func, &ls);
   thread_create ("med", PRI_DEFAULT + 3, m_thread_func, &ls);
   thread_create ("high", PRI_DEFAULT + 5, h_thread_func, &ls);
+  // printf("(main) sema_up 이전 priority: %d\n", thread_current()->priority);
   sema_up (&ls.sema);
+  // printf("(main) sema_up 이후 priority: %d\n", thread_current()->priority);
   msg ("Main thread finished.");
 }
 
@@ -54,8 +56,10 @@ l_thread_func (void *ls_)
   lock_acquire (&ls->lock);
   msg ("Thread L acquired lock.");
   sema_down (&ls->sema);
+  // printf("(l) sema_donw 이후 깨어나는 쓰레드 name: %s, priority: %d\n", thread_current()->name, thread_current()->priority);
   msg ("Thread L downed semaphore.");
   lock_release (&ls->lock);
+  // printf("(l) lock_release 이후 깨어나는 쓰레드 name: %s, priority: %d\n", thread_current()->name, thread_current()->priority);
   msg ("Thread L finished.");
 }
 
@@ -65,6 +69,7 @@ m_thread_func (void *ls_)
   struct lock_and_sema *ls = ls_;
 
   sema_down (&ls->sema);
+  // printf("(m) sema_donw 이후 깨어나는 쓰레드 name: %s, priority: %d\n", thread_current()->name, thread_current()->priority);
   msg ("Thread M finished.");
 }
 
@@ -78,5 +83,6 @@ h_thread_func (void *ls_)
 
   sema_up (&ls->sema);
   lock_release (&ls->lock);
+  // printf("(h) lock_release 이후 깨어나는 쓰레드 name: %s, priority: %d\n", thread_current()->name, thread_current()->priority);
   msg ("Thread H finished.");
 }

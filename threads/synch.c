@@ -113,6 +113,7 @@ sema_up (struct semaphore *sema) {
 	ASSERT (sema != NULL);
 
 	old_level = intr_disable ();
+	list_sort (&sema->waiters, priority_less, NULL);
 	if (!list_empty (&sema->waiters))
 		thread_unblock (list_entry (list_pop_front (&sema->waiters),
 					struct thread, elem));
@@ -195,12 +196,26 @@ lock_acquire (struct lock *lock) {
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
 
-	// lock의 value가 0일 경우, 우선순위 교체
+	// lock의 value가 0일 경우, 우선순위 donation
 	if(lock->semaphore.value == 0) {
-		int guest_priority = thread_current()->priority;
-		int holder_priority = lock->priority;
-		if (guest_priority > holder_priority) {
-			lock->holder->priority = guest_priority;
+
+		struct thread *curr = thread_current();
+		curr->lock = lock;
+		struct thread *target = thread_current();
+
+		while(target->lock) {
+			target = target->lock->holder;
+			if (target->priority < curr->priority) {
+				//첫 donation일 경우, 기존 priority를 lock->priority에 저장(priority-donate-multiple 테스트)
+				if (list_empty(&lock->semaphore.waiters) && lock->priority != target->priority) {
+					lock->priority = target->priority;
+				}
+				target->priority = curr->priority;
+				// printf("(lock_acquire) donation 여부 확인, holder의 이름: %s, priority: %d\n", lock->holder->name, lock->holder->priority);
+
+			} else {
+				break;
+			}
 		}
 	} 
 
@@ -252,7 +267,11 @@ lock_release (struct lock *lock) {
 	// 		lock->holder->priority = guest_priority;
 	// 	}
 	// }
-	if (lock->priority != lock->holder->priority) {
+	struct list *lock_waiters = &lock->semaphore.waiters;
+	struct list_elem *front_elem = list_begin(lock_waiters);
+	struct thread *front_thread = list_entry (front_elem, struct thread, elem); 
+
+	if (front_thread->priority == lock->holder->priority) {
 		lock->holder->priority = lock->priority;
 	}
 	lock->holder = NULL;
