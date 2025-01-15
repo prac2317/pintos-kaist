@@ -11,6 +11,7 @@
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 #include "intrinsic.h"
+#include "threads/malloc.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -127,12 +128,11 @@ thread_start (void) {
 	/* Create the idle thread. */
 	struct semaphore idle_started;
 	sema_init (&idle_started, 0);
-	printf("%s\n", thread_current()->name);
 	thread_create ("idle", PRI_MIN, idle, &idle_started);
+	printf("(thread_start) idle 생성, 현재 쓰레드: %s\n", thread_current()->name);
 
 	/* Start preemptive thread scheduling. */
 	intr_enable ();
-
 	/* Wait for the idle thread to initialize idle_thread. */
 	sema_down (&idle_started);
 	// printf("sema_up 이후 누가 먼저 실행되는지: thread_start\n");
@@ -184,7 +184,6 @@ thread_print_stats (void) {
 tid_t
 thread_create (const char *name, int priority,
 		thread_func *function, void *aux) {
-	// printf("thread_create 시작 : %s, priority: %d\n", name, priority);
 	struct thread *t;
 	tid_t tid;
 
@@ -213,7 +212,9 @@ thread_create (const char *name, int priority,
 	/* Add to run queue. */
 	thread_unblock (t);
 
+	// printf("(thread_create) yield 전\n");
 	yield_by_priority();
+	// printf("(thread_create) yield 후\n");
 	
 	return tid;
 }
@@ -251,17 +252,6 @@ thread_unblock (struct thread *t) {
 	list_push_back (&ready_list, &t->elem);
 	list_sort (&ready_list, priority_less, NULL);
 	t->status = THREAD_READY;
-
-	// if (!list_empty (&ready_list)) {
-	// 	struct list_elem *front_elem = list_front (&ready_list);
-	// 	struct thread *front_thread = list_entry (front_elem, struct thread, elem);
-	// 	printf("(thread_unblock) 현재 cpu를 점유하는 쓰레드의 이름과 우선순위: %s, %d\n", thread_current()->name, thread_current()->priority);
-	// 	printf("(thread_unblock) ready_list 맨앞 쓰레드의 이름과 우선순위 : %s, %d\n", front_thread->name, front_thread->priority);
-	// 	if (front_thread->priority > thread_current()->priority) {
-	// 		printf("(thread_unblock) 곧 thread_yield 시작합니다!\n");
-	// 		thread_yield();
-	// 	}
-	// }
 
 	intr_set_level (old_level);
 }
@@ -468,8 +458,6 @@ idle (void *idle_started_ UNUSED) {
 	struct list_elem *front_elem = list_begin(sema_waiters);
 	struct thread *front_thread = list_entry (front_elem, struct thread, elem);
 
-	// printf("(idle)(sema_up 전) sema_waiter에서 대기중인 쓰레드 우선순위: %d\n", front_thread->priority);
-	// printf("(idle)(sema_up 전) sema_waiter에서 대기중인 쓰레드 이름: %s\n", front_thread->name);
 
 	sema_up (idle_started);
 
@@ -645,6 +633,7 @@ do_schedule(int status) {
 	while (!list_empty (&destruction_req)) {
 		struct thread *victim =
 			list_entry (list_pop_front (&destruction_req), struct thread, elem);
+		// free(victim->donation_history);
 		palloc_free_page(victim);
 	}
 	thread_current ()->status = status;
@@ -699,6 +688,6 @@ allocate_tid (void) {
 	lock_acquire (&tid_lock);
 	tid = next_tid++;
 	lock_release (&tid_lock);
-
+	// printf("(allocate_tid) 락에서 나옴\n");
 	return tid;
 }
