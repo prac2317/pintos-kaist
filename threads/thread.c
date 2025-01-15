@@ -129,13 +129,11 @@ thread_start (void) {
 	struct semaphore idle_started;
 	sema_init (&idle_started, 0);
 	thread_create ("idle", PRI_MIN, idle, &idle_started);
-	printf("(thread_start) idle 생성, 현재 쓰레드: %s\n", thread_current()->name);
 
 	/* Start preemptive thread scheduling. */
 	intr_enable ();
 	/* Wait for the idle thread to initialize idle_thread. */
 	sema_down (&idle_started);
-	// printf("sema_up 이후 누가 먼저 실행되는지: thread_start\n");
 }
 
 /* Called by the timer interrupt handler at each timer tick.
@@ -212,9 +210,7 @@ thread_create (const char *name, int priority,
 	/* Add to run queue. */
 	thread_unblock (t);
 
-	// printf("(thread_create) yield 전\n");
 	yield_by_priority();
-	// printf("(thread_create) yield 후\n");
 	
 	return tid;
 }
@@ -258,17 +254,9 @@ thread_unblock (struct thread *t) {
 
 void
 thread_sleep(int64_t ticks) {
-	// struct thread *t = thread_current();
-	// running_thread sleep_list로 보내기
-	// if (t != idle_thread)
-	// 	list_push_back (&sleep_list, &t->elem);
-	// do_schedule (THREAD_BLOCKED);
 
 	struct thread *curr = thread_current ();
-	// printf("sleep할 thread 이름: %s\n", curr->name);
 	enum intr_level old_level;
-
-	// ASSERT (!intr_context ());
 
 	old_level = intr_disable ();
 	ASSERT (curr != idle_thread);
@@ -276,8 +264,6 @@ thread_sleep(int64_t ticks) {
 
 	list_push_back (&sleep_list, &curr->elem);
 	list_sort (&sleep_list, priority_less, NULL);
-	// do_schedule (THREAD_BLOCKED);
-	// intr_set_level (old_level);
 
 	thread_block();
 
@@ -286,31 +272,16 @@ thread_sleep(int64_t ticks) {
 
 void
 thread_wakeup(int64_t ticks) {
-	// sleep_list에서 ready_list로 보내기
 	struct list_elem *e = list_begin(&sleep_list);
-	// struct list_elem *tail = list_tail(&sleep_list);
-	// struct thread *t;
 	while (e != list_end(&sleep_list)) {
 		struct thread *t = list_entry(e, struct thread, elem);
-		// printf("list_entry 제대로 작동했는지 확인, thread: %s\n", t->name);
-		// printf("list_entry 제대로 작동했는지 확인, ticks: %d\n", t->time);
 		if (t->time <= ticks) {
-			// printf("이번에 깨울 thread: %s, ticks: %d\n", t->name, t->time);
 			e = list_remove(e);
 			thread_unblock(t);
-			// printf("unblock 후 다음 element로 넘어감\n");
 		} else {
 			e = list_next(e);
-			// printf("다음 element로 넘어감\n");
 		}
 	}
-
-	// struct thread *t = list_entry (list_pop_front (&sleep_list), struct thread, elem);
-	// printf("wakeup할 thread 이름: %s\n", t->name);
-	// if (ticks > t->time) {
-
-	// }
-	// thread_unblock(t);
 }
 
 void
@@ -385,9 +356,6 @@ thread_yield (void) {
 		list_push_back (&ready_list, &curr->elem);
 		list_sort (&ready_list, priority_less, NULL);
 
-	// printf("thread_yield\n");
-	// printf("현재 쓰레드의 name: %s\n", thread_current()->name);
-	// printf("현재 쓰레드의 priority: %d\n", thread_current()->priority);
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
 }
@@ -395,7 +363,29 @@ thread_yield (void) {
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) {
-	thread_current ()->priority = new_priority;
+
+	struct list *donation_history = &thread_current ()->donation_history;
+
+	if (list_empty(donation_history) || donation_history->head.next == 0) {
+		thread_current()->priority = new_priority;
+	} else {
+		struct list_elem *elem = list_front(donation_history);
+		struct donation *donation = list_entry(elem, struct donation, elem);
+
+		while(elem != list_end(donation_history)) {
+			if (donation->lock == NULL) {
+				donation->donated_priority = new_priority;
+				break;
+			}
+			elem = elem->next;
+			donation = list_entry(elem, struct donation, elem);
+		}
+
+		list_sort(&thread_current()->donation_history, priority_less, NULL);
+		thread_current ()->priority = list_entry(list_front(donation_history), struct donation, elem)->donated_priority;
+	}
+
+
 	if (!list_empty (&ready_list)) {
 		struct list_elem *front_elem = list_front (&ready_list);
 		struct thread *front_thread = list_entry (front_elem, struct thread, elem);
@@ -449,7 +439,6 @@ thread_get_recent_cpu (void) {
    special case when the ready list is empty. */
 static void
 idle (void *idle_started_ UNUSED) {
-	// printf("(idle) idle 실행 여부 확인\n");
 	struct semaphore *idle_started = idle_started_;
 
 	idle_thread = thread_current ();
@@ -460,9 +449,6 @@ idle (void *idle_started_ UNUSED) {
 
 
 	sema_up (idle_started);
-
-	// printf("(idle) semaphore의 value: %d\n", idle_started->value);
-	// printf("(idle) sema_up 이후 누가 실행되는지: idle\n");
 
 	for (;;) {
 		/* Let someone else run. */
@@ -482,7 +468,6 @@ idle (void *idle_started_ UNUSED) {
 		   7.11.1 "HLT Instruction". */
 		asm volatile ("sti; hlt" : : : "memory");
 	}
-	printf("for문 넘어서 도달하는지?\n");
 }
 
 /* Function used as the basis for a kernel thread. */
@@ -633,7 +618,6 @@ do_schedule(int status) {
 	while (!list_empty (&destruction_req)) {
 		struct thread *victim =
 			list_entry (list_pop_front (&destruction_req), struct thread, elem);
-		// free(victim->donation_history);
 		palloc_free_page(victim);
 	}
 	thread_current ()->status = status;
@@ -688,7 +672,6 @@ allocate_tid (void) {
 	lock_acquire (&tid_lock);
 	tid = next_tid++;
 	lock_release (&tid_lock);
-	// printf("(allocate_tid) 락에서 나옴\n");
 	return tid;
 }
 
@@ -721,5 +704,4 @@ donatinon_history_print(struct thread *t) {
 			elem = elem->next;
 		}
 	}
-
 }
