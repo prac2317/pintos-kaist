@@ -16,6 +16,13 @@ bool sema_try_down (struct semaphore *);
 void sema_up (struct semaphore *);
 void sema_self_test (void);
 
+// /* Lock. */
+// struct lock {
+// 	struct thread *holder;      /* Thread holding lock (for debugging). */
+// 	struct semaphore semaphore; /* Binary semaphore controlling access. */
+// 	int priority;
+// };
+
 /* Lock. */
 struct lock {
 	struct thread *holder;      /* Thread holding lock (for debugging). */
@@ -28,6 +35,14 @@ void lock_acquire (struct lock *);
 bool lock_try_acquire (struct lock *);
 void lock_release (struct lock *);
 bool lock_held_by_current_thread (const struct lock *);
+
+struct donation {
+	struct lock *lock;
+	int donated_priority;
+	struct list_elem elem;
+};
+
+struct donation *create_donation();
 
 /* Condition variable. */
 struct condition {
@@ -47,12 +62,3 @@ void cond_broadcast (struct condition *, struct lock *);
 #define barrier() asm volatile ("" : : : "memory")
 
 #endif /* threads/synch.h */
-
-// struct lock_history {
-// 	// struct list_elem *elem;
-// 	bool is_donate;
-// 	struct thread donator;
-// 	struct thread recipients;
-// 	int original_priority;
-// 	int changed_priority;
-// };

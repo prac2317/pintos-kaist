@@ -107,6 +107,7 @@ struct thread {
 	
 	int64_t time;
 	struct lock *lock;
+	struct list donation_history;
 
 	/* Owned by thread.c. */
 	struct intr_frame tf;               /* Information for switching */
