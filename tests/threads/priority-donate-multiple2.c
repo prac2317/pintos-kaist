@@ -68,7 +68,6 @@ a_thread_func (void *lock_)
 
   lock_acquire (lock);
   msg ("Thread a acquired lock a.");
-  // printf("(a) 통과하는 쓰레드 이름: %s, priority: %d\n", thread_current()->name, thread_get_priority());
   lock_release (lock);
   msg ("Thread a finished.");
 }
@@ -87,6 +86,5 @@ b_thread_func (void *lock_)
 static void
 c_thread_func (void *a_ UNUSED) 
 {
-  // printf("(c) 통과하는 쓰레드 이름: %s, priority: %d\n", thread_current()->name, thread_get_priority());
   msg ("Thread c finished.");
 }

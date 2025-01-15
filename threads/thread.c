@@ -691,3 +691,35 @@ allocate_tid (void) {
 	// printf("(allocate_tid) 락에서 나옴\n");
 	return tid;
 }
+
+// ready_list 순회하면서 들어있는 쓰레드 이름 출력
+void
+ready_list_print(void) {
+	printf("(ready_list_print) 시작\n");
+	struct list_elem *elem = ready_list.head.next;
+	if (list_empty(&ready_list)) {
+		printf("(ready_list_print) ready_list는 비어있음\n");
+	} else {
+		while(elem != list_end(&ready_list)) {
+			printf("(ready_list_print) 시작\n");
+			printf("(ready_list_print) 쓰레드 이름: %s\n", list_entry(elem, struct thread, elem)->name);
+			elem = elem->next;
+		}
+	}
+}
+
+void
+donatinon_history_print(struct thread *t) {
+	printf("(donation_history_print) 시작\n");
+	struct list_elem *elem = &t->donation_history.head.next;
+	if (list_empty(&t->donation_history)) {
+		printf("(donation_history_print) donatino_history는 비어있음\n");
+	} else {
+		while(elem != list_end(&t->donation_history)) {
+			printf("(donation_history_print) 시작\n");
+			printf("(donation_history_print) priority: %d\n", list_entry(elem, struct donation, elem)->donated_priority);
+			elem = elem->next;
+		}
+	}
+
+}

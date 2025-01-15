@@ -283,21 +283,21 @@ lock_acquire (struct lock *lock) {
 		// printf("(lock_acquire) 초기화, 현재 쓰레드: %s\n", thread_current()->name);
 	}
 
-	// lock의 value가 0일 경우, 우선순위 donation
+	// 주인이 아닐 경우, 우선순위 donation
 	if(lock->semaphore.value == 0) {
 
 		// printf("(lock_acquire) lock->semaphore.value 통과\n");
 		struct thread *curr = thread_current();
 		curr->lock = lock;	
 		struct thread *target = thread_current();
+		struct lock *lock_for_donation = lock;
 		// printf("(lock_acquire) 쓰레드의 이름: %s\n", thread_current()->name);
 
-		if(list_empty(&lock->holder->donation_history)) {
+		// 첫번째 도네이션
+		if (list_empty(&target->lock->holder->donation_history)) {
 			struct donation *donation = create_donation();
-			donation->lock = NULL;
-			donation->donated_priority = lock->holder->priority;
-			list_push_back(&lock->holder->donation_history, &donation);
-			
+			donation->donated_priority = target->lock->holder->priority;
+			list_push_back(&target->lock->holder->donation_history, &donation->elem);
 		}
 
 		while(target->lock) {
@@ -305,13 +305,13 @@ lock_acquire (struct lock *lock) {
 			if (target->priority < curr->priority) {
 				target->priority = curr->priority;   // donation
 				// 첫 donation일 경우
-				if (list_empty(&lock->semaphore.waiters)) {
+				// if (list_empty(&lock->semaphore.waiters)) {
 					// 1. 새로운 donate 만들기
 					struct donation *donation = create_donation();
-
-					donation->lock = lock;
-					donation->donated_priority = target->priority;
 					list_push_back(&target->donation_history, &donation->elem);
+					donation->lock = lock_for_donation;
+					donation->donated_priority = target->priority;
+
 					// printf("(lock_acquire) 첫 donation. target 이름: %s, priority: %d\n", target->name, target->priority);
 					// printf("****** %d, %d\n",donation->donated_priority, target->priority);
 
@@ -320,10 +320,11 @@ lock_acquire (struct lock *lock) {
 					// printf("(lock_acquire) - while문 안쪽. donation에 새로운 donation 넣음. donation->priority: %d\n", donation->donated_priority);
 					// printf("(lock_acquire) 첫 donation. target 이름: %s, priority: %d\n", target->name, target->priority);
 					// printf("****** %d, %d\n",donation->donated_priority, target->priority);
-				}
+				// }
 			} else {
 				break;
 			}
+			lock_for_donation = lock_for_donation->holder->lock;
 		}
 	} 
 	sema_down (&lock->semaphore);
@@ -389,11 +390,13 @@ lock_release (struct lock *lock) {
 
 	// lock->holder->donation_history.head.next == &lock->holder->donation_history.tail
 
+	// 리스트만 있고 안에 첫번째 도네이션은 안 넣은 상태 방지
 	if (!list_empty(&lock->holder->donation_history)) {
 		// printf("(lock_release) 초기화 이전 donation_history: %x\n", lock->holder->donation_history);
-		list_init(&lock->holder->donation_history);
+		// list_init(&lock->holder->donation_history);
 		// printf("(lock_release) 초기화 이후 donation_history: %x\n", lock->holder->donation_history);
-		
+
+
 		struct list *donation_list = &lock->holder->donation_history;
 		struct list_elem *donation_elem = list_begin(donation_list);
 		struct donation *donation = list_entry (donation_elem, struct donation, elem);
@@ -413,8 +416,8 @@ lock_release (struct lock *lock) {
 			// printf("(lock_release) donation->lock: %x\n", donation);
 			if (donation->lock == lock) {
 				// printf("(lock_release) 삭제\n");
+				// donatinon_history_print(&lock->holder);
 				list_remove(donation_elem);
-				break;
 			} 
 			donation_elem = donation_elem->next;
 			donation = list_entry (donation_elem, struct donation, elem);

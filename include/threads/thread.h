@@ -151,4 +151,7 @@ int thread_get_load_avg (void);
 
 void do_iret (struct intr_frame *tf);
 
+void ready_list_print(void);
+void donatinon_history_print(struct thread *t);
+
 #endif /* threads/thread.h */
