@@ -41,6 +41,50 @@ syscall_init (void) {
 void
 syscall_handler (struct intr_frame *f UNUSED) {
 	// TODO: Your implementation goes here.
-	printf ("system call!\n");
+	// printf ("system call!\n");
+	// printf("(syscall_handler) rax: %x\n", f->R.rax);
+	// printf("(syscall_handler) rsp: %x\n", f->rsp);
+	// printf("(syscall_handler) rip: %x\n", f->rip);
+	// printf("(syscall_handler) vec_no: %x\n", f->vec_no);
+	// printf("(syscall_handler) rdi: %x\n", f->R.rdi);
+	// printf("(syscall_handler) rsi: %x\n", f->R.rsi);
+	// printf("(syscall_handler) rdx: %x\n", f->R.rdx);
+
+	switch(f->R.rax) {
+		case SYS_EXIT:
+			exit(f->R.rdi);
+		case SYS_WRITE:
+			f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
+			return;
+		default:
+			printf("(syscall_handler) 통과!\n");
+	}
+
+
+	// printf("(syscall_handler) syscall_handler 호출\n");
+	// printf("(syscall_handler) 현재 쓰레드: %s\n", thread_current()->name);
+	// if (f->R.rax == 10) {
+	// 	f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
+	// 	return;
+	// }
+	// ready_list_print();
+		
+
+}
+
+int
+exit (int status) {
+	// todo: 오류 구현하기
+	// printf("(exit) f->R.rdi: %d\n", status);
 	thread_exit ();
+	return 0;
+}
+
+int write (int fd, void *buffer, unsigned size) {
+	// todo: fd가 1이 아닌 나머지일 때 구현하기 - 테이블 만들기..?
+	if (fd == 1) {
+		putbuf(buffer, size);
+	}
+	
+	return size;
 }

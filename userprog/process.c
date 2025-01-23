@@ -50,6 +50,14 @@ process_create_initd (const char *file_name) {
 		return TID_ERROR;
 	strlcpy (fn_copy, file_name, PGSIZE);
 
+	// file_name 미리 쪼개두기 - 파일 이름의 길이는 14가 한계라고 함
+	// ----- 오류 발생 시 다시 보기!! -----
+	char *token, *save_ptr;
+    for (token = strtok_r (file_name, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr)) {
+		strlcpy (file_name, token, 15);
+		break;
+    }
+
 	/* Create a new thread to execute FILE_NAME. */
 	tid = thread_create (file_name, PRI_DEFAULT, initd, fn_copy);
 	if (tid == TID_ERROR)
@@ -204,6 +212,11 @@ process_wait (tid_t child_tid UNUSED) {
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
+	thread_sleep(100);
+	// printf("(process_wait) child_tid: %d\n", child_tid);
+	// while(1) {
+
+	// }
 	return -1;
 }
 
@@ -215,6 +228,7 @@ process_exit (void) {
 	 * TODO: Implement process termination message (see
 	 * TODO: project2/process_termination.html).
 	 * TODO: We recommend you to implement process resource cleanup here. */
+	printf("%s: exit(%d)\n", curr->name, 0);
 
 	process_cleanup ();
 }
@@ -329,6 +343,17 @@ load (const char *file_name, struct intr_frame *if_) {
 	bool success = false;
 	int i;
 
+	char argv[64][20];
+	int argc = 0;
+	char *p_argv[64];
+
+	// argv(2차원 배열)에 argument 넣기
+    char *token, *save_ptr;
+    for (token = strtok_r (file_name, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr)) {
+		strlcpy (argv[argc], token, sizeof argv);
+		argc++;
+    }
+
 	/* Allocate and activate page directory. */
 	t->pml4 = pml4_create ();
 	if (t->pml4 == NULL)
@@ -336,6 +361,7 @@ load (const char *file_name, struct intr_frame *if_) {
 	process_activate (thread_current ());
 
 	/* Open executable file. */
+	strlcpy(file_name, argv[0], sizeof argv[0]);
 	file = filesys_open (file_name);
 	if (file == NULL) {
 		printf ("load: %s: open failed\n", file_name);
@@ -416,6 +442,41 @@ load (const char *file_name, struct intr_frame *if_) {
 
 	/* TODO: Your code goes here.
 	 * TODO: Implement argument passing (see project2/argument_passing.html). */
+
+	// 스택에 역순으로 넣기
+	for (int i = 0; i < argc; i++) {
+		// '\0'값 포함한 길이
+		int argv_length = strlen(argv[argc - 1 -i]) + 1;
+
+		if_->rsp -= argv_length;
+		p_argv[argc - 1 -i] = if_->rsp;
+
+		char *write_char = if_->rsp;
+		for (int j = 0; j < argv_length; j++) {
+			*write_char = argv[argc - 1 - i][j];
+			write_char++;
+		}
+		// 왜 직접 '\0' 넣으면 오류 발생하는지?
+		// *write_char = '\0';
+	}
+
+	// word_align 간격 구하기
+	int word_align_size = 8 - (USER_STACK - (if_->rsp)) % 8;
+	if_->rsp -= word_align_size;
+
+	// 포인터 집어넣기
+	if_->rsp -= 8;
+	for (int i = 0; i < argc; i++) {
+		if_->rsp -= 8;
+		char **write_p_char = if_->rsp;
+		*write_p_char = p_argv[argc-1-i];
+	}
+
+	if_->R.rdi = argc;
+	if_->R.rsi = if_->rsp;
+	if_->rsp = if_->rsp - 8;
+
+	// hex_dump (0, if_->rsp, 0x47480000 - if_->rsp, true);
 
 	success = true;
 

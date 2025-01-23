@@ -136,7 +136,7 @@ tell (int fd) {
 }
 
 void
-close (int fd) {
+close (int fd) {;
 	syscall1 (SYS_CLOSE, fd);
 }
 
